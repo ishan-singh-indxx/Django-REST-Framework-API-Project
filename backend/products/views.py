@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 # Create your views here.
-from rest_framework import generics, mixins
+from rest_framework import generics, mixins, permissions, authentication
 
 from .models import Product
 from .serializers import ProductSerializer
@@ -11,43 +11,11 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
 
-
-class ProductMixinView(
-    mixins.ListModelMixin,
-    mixins.CreateModelMixin,
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    generics.GenericAPIView):
-
-    queryset = Product.objects.all()
-    serializer_class =  ProductSerializer
-    lookup_field = 'pk'
-
-    def get(self, request, *args, **kwargs):
-        print(args, kwargs)
-        pk = kwargs.get('pk')
-        if pk is not None:
-            return self.retrieve(request, *args, **kwargs)
-        return self.list(request, *args, **kwargs)
-    
-    def post(self, request, *args, **kwargs):
-        return self.create(request, *args, **kwargs)
-    
-    def perform_create(self, serializer):
-        # serializer.save(user=self.request.user)
-        title= serializer.validated_data.get('title')
-        content= serializer.validated_data.get('content') or None
-        if content is None:
-            content = "This is a default content"
-        serializer.save(content=content)
-
-
-product_mixin_view = ProductMixinView.as_view()
-
-
 class ProductListCreateAPIView(generics.ListCreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    authentication_classes = [authentication.SessionAuthentication]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         # serializer.save(user=self.request.user)
@@ -120,3 +88,36 @@ def product_alt_view(request, pk=None, *args, **kwargs):
             return Response(serializer.data)
         # return Response(data)
         return Response({"message":"Invalid data"}, status=400)
+    
+
+class ProductMixinView(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    generics.GenericAPIView):
+
+    queryset = Product.objects.all()
+    serializer_class =  ProductSerializer
+    lookup_field = 'pk'
+
+    def get(self, request, *args, **kwargs):
+        print(args, kwargs)
+        pk = kwargs.get('pk')
+        if pk is not None:
+            return self.retrieve(request, *args, **kwargs)
+        return self.list(request, *args, **kwargs)
+    
+    def post(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+    
+    def perform_create(self, serializer):
+        # serializer.save(user=self.request.user)
+        title= serializer.validated_data.get('title')
+        content= serializer.validated_data.get('content') or None
+        if content is None:
+            content = "This is a default content"
+        serializer.save(content=content)
+
+
+product_mixin_view = ProductMixinView.as_view()
